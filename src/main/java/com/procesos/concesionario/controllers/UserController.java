@@ -1,65 +1,104 @@
-package com.procesos.concesionario.controllers;
+package com.proyecto.app.controllers;
 
-import com.procesos.concesionario.models.User;
-import com.procesos.concesionario.services.UserServiceImp;
+import com.proyecto.app.entity.User;
+import com.proyecto.app.repository.UserRepository;
+import com.proyecto.app.util.JWTUtil;
+import com.proyecto.app.util.Message;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 public class UserController {
+
     @Autowired
-    private UserServiceImp userServiceImp;
-    @GetMapping(value = "/user/{id}")
-    public ResponseEntity getById(@PathVariable(name = "id") Long id){
+    private UserRepository userRepository;
+    private Message message = new Message();
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    @Autowired
+    private JWTUtil jwtUtil;
 
-        Map response = new HashMap<>();
-
-        try{
-            response.put("message","Se encontró el usuario");
-            response.put("data",userServiceImp.getUserById(id));
-            return new ResponseEntity(response, HttpStatus.OK);
-        }catch(Exception e) {
-            response.put("message", "No se encontró el usuario");
-            response.put("data", e.getMessage());
-            return new ResponseEntity(response, HttpStatus.BAD_REQUEST);
-        }
-
+    private boolean validarToken(String token){
+        String id = jwtUtil.getKey(token);
+        return id != null;
     }
 
-    @PostMapping(value = "/user")
+    @RequestMapping(value = "api/users/{id}", method = RequestMethod.GET)
+    public Optional<User> getUser(@PathVariable Long id, @RequestHeader(value = "Authorization") String token){
+        if(validarToken(token) == false){ return null;}
+
+        Optional<User> foundUser = userRepository.findById(id);
+        if(foundUser.isPresent()){
+            return foundUser;
+        }
+        return null;
+    }
+
+    @RequestMapping(value = "api/users", method = RequestMethod.POST)
     public ResponseEntity createUser(@RequestBody User user){
-
-        Map response = new HashMap<>();
+        Map<String,String> response = new LinkedHashMap<>();
         try{
-            response.put("message","Se guardó el usuario");
-            response.put("data",userServiceImp.createUser(user));
-            return new ResponseEntity(response, HttpStatus.CREATED);
-        }catch(Exception e) {
-            response.put("message", "No se guardó el usuario");
-            response.put("data", e.getMessage());
-            return new ResponseEntity(response, HttpStatus.BAD_REQUEST);
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+            userRepository.save(user);
+            return message.viewMessage(HttpStatus.OK,"success","registered user success!");
+        }catch (Exception e){
+            return message.viewMessage(HttpStatus.INTERNAL_SERVER_ERROR,"error","An error occurred while registering the user!");
+        }
+
+    }
+
+    @RequestMapping(value = "api/users", method = RequestMethod.GET)
+    public List<User> listUsers(@RequestHeader(value = "Authorization") String token){
+        if(validarToken(token) == false){ return null;}
+        return userRepository.findAll();
+    }
+
+    @RequestMapping(value = "api/users/{id}", method = RequestMethod.PUT)
+    public ResponseEntity editUser(@RequestBody User newUser, @PathVariable Long id, @RequestHeader(value = "Authorization") String token){
+        if(validarToken(token) == false){ return null;}
+        Map<String, String> response = new HashMap<>();
+        try {
+            User user = userRepository.findById(id).get();
+            user.setFirstName(newUser.getFirstName());
+            user.setLastName(newUser.getLastName());
+            user.setEmail(newUser.getEmail());
+            user.setPassword(passwordEncoder.encode(newUser.getPassword()));
+            userRepository.save(user);
+
+            return message.viewMessage(HttpStatus.OK,"success","user edit success!!");
+        }catch (Exception e){
+            return message.viewMessage(HttpStatus.NOT_FOUND,"error","User not found!");
         }
     }
 
-    @PutMapping(value = "/user/{id}")
-    public ResponseEntity updateUser(@PathVariable(name = "id") Long id, User user){
-
-        Map response = new HashMap<>();
-        try{
-            response.put("message","Se actualizó el usuario");
-            response.put("data",userServiceImp.updateUser(id,user));
-            return new ResponseEntity(response, HttpStatus.OK);
-        }catch(Exception e) {
-            response.put("message", "No se actualizó el usuario");
-            response.put("data", e.getMessage());
-            return new ResponseEntity(response, HttpStatus.BAD_REQUEST);
+    @RequestMapping(value = "api/users/{id}", method = RequestMethod.DELETE)
+    public ResponseEntity deleteUser(@PathVariable Long id, @RequestHeader(value = "Authorization") String token){
+        if(validarToken(token) == false){ return null;}
+        Map<String, String> response = new HashMap<>();
+        try {
+            User user = userRepository.findById(id).get();
+            userRepository.delete(user);
+            return message.viewMessage(HttpStatus.OK,"success","user delete success!!");
+        }catch (Exception e){
+            return message.viewMessage(HttpStatus.NOT_FOUND,"error","User not found!");
         }
+
+
     }
-
-
 }
+
+
+
+
+
+
+
+
+
+
+
