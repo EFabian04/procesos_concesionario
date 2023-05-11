@@ -1,8 +1,10 @@
-package com.proyecto.app.repository;
+package com.procesos.concesionario.repository;
 
-import com.proyecto.app.entity.User;
+import com.procesos.concesionario.models.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Optional;
+
 public interface UserRepository extends JpaRepository<User,Long> {
-    User findByEmail(String email);
+    Optional<User> findByEmailAndPassword(String email,String password);
 }

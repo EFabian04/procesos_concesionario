@@ -1,104 +1,67 @@
-package com.proyecto.app.controllers;
+package com.procesos.concesionario.controllers;
 
-import com.proyecto.app.entity.User;
-import com.proyecto.app.repository.UserRepository;
-import com.proyecto.app.util.JWTUtil;
-import com.proyecto.app.util.Message;
+import com.procesos.concesionario.models.User;
+import com.procesos.concesionario.services.UserService;
+import com.procesos.concesionario.services.UserServiceImpl;
+import com.procesos.concesionario.utils.ApiResponse;
+import com.procesos.concesionario.utils.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 @RestController
+@RequestMapping("/user")
 public class UserController {
-
     @Autowired
-    private UserRepository userRepository;
-    private Message message = new Message();
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    @Autowired
-    private JWTUtil jwtUtil;
-
-    private boolean validarToken(String token){
-        String id = jwtUtil.getKey(token);
-        return id != null;
-    }
-
-    @RequestMapping(value = "api/users/{id}", method = RequestMethod.GET)
-    public Optional<User> getUser(@PathVariable Long id, @RequestHeader(value = "Authorization") String token){
-        if(validarToken(token) == false){ return null;}
-
-        Optional<User> foundUser = userRepository.findById(id);
-        if(foundUser.isPresent()){
-            return foundUser;
-        }
-        return null;
-    }
-
-    @RequestMapping(value = "api/users", method = RequestMethod.POST)
-    public ResponseEntity createUser(@RequestBody User user){
-        Map<String,String> response = new LinkedHashMap<>();
+    private UserService userServiceImpl;
+    private ApiResponse apiResponse;
+    @GetMapping(value = "/{id}")
+    public ResponseEntity getById(@PathVariable(name = "id") Long id){
         try{
-            user.setPassword(passwordEncoder.encode(user.getPassword()));
-            userRepository.save(user);
-            return message.viewMessage(HttpStatus.OK,"success","registered user success!");
-        }catch (Exception e){
-            return message.viewMessage(HttpStatus.INTERNAL_SERVER_ERROR,"error","An error occurred while registering the user!");
+            apiResponse = new ApiResponse(Constants.REGISTER_FOUND,userServiceImpl.getUserById(id));
+            return new ResponseEntity(apiResponse, HttpStatus.OK);
+        }catch(Exception e){
+            apiResponse = new ApiResponse(Constants.REGISTER_NOT_FOUND, e.getMessage());
+            return new ResponseEntity(apiResponse, HttpStatus.BAD_REQUEST);
+        }
+
+    }
+    @PostMapping(value = "")
+    public ResponseEntity createUser(@RequestBody User user){
+        try{
+            apiResponse = new ApiResponse(Constants.REGISTER_CREATED,userServiceImpl.createUser(user));
+            return new ResponseEntity(apiResponse, HttpStatus.CREATED);
+        }catch(Exception e){
+            apiResponse = new ApiResponse(Constants.REGISTER_NOT_CREATED, e.getMessage());
+            return new ResponseEntity(apiResponse, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @GetMapping(value = "")
+    public ResponseEntity getAll(){
+        try{
+            apiResponse = new ApiResponse(Constants.REGISTERS_FOUND, userServiceImpl.allUsers());
+            return new ResponseEntity(apiResponse, HttpStatus.OK);
+        }catch(Exception e){
+            apiResponse = new ApiResponse(Constants.REGISTERS_NOT_FOUND, e.getMessage());
+            return new ResponseEntity(apiResponse, HttpStatus.BAD_REQUEST);
         }
 
     }
 
-    @RequestMapping(value = "api/users", method = RequestMethod.GET)
-    public List<User> listUsers(@RequestHeader(value = "Authorization") String token){
-        if(validarToken(token) == false){ return null;}
-        return userRepository.findAll();
-    }
-
-    @RequestMapping(value = "api/users/{id}", method = RequestMethod.PUT)
-    public ResponseEntity editUser(@RequestBody User newUser, @PathVariable Long id, @RequestHeader(value = "Authorization") String token){
-        if(validarToken(token) == false){ return null;}
-        Map<String, String> response = new HashMap<>();
+    @PutMapping(value="/{id}")
+    public ResponseEntity updateUser(@PathVariable(name="id")Long id,User user) {
         try {
-            User user = userRepository.findById(id).get();
-            user.setFirstName(newUser.getFirstName());
-            user.setLastName(newUser.getLastName());
-            user.setEmail(newUser.getEmail());
-            user.setPassword(passwordEncoder.encode(newUser.getPassword()));
-            userRepository.save(user);
-
-            return message.viewMessage(HttpStatus.OK,"success","user edit success!!");
-        }catch (Exception e){
-            return message.viewMessage(HttpStatus.NOT_FOUND,"error","User not found!");
+            apiResponse = new ApiResponse(Constants.REGISTER_UPDATED, userServiceImpl.updateUser(id, user));
+            return new ResponseEntity(apiResponse, HttpStatus.OK);
+        } catch (Exception e) {
+            apiResponse = new ApiResponse(Constants.REGISTER_NOT_UPDATED, e.getMessage());
+            return new ResponseEntity(apiResponse, HttpStatus.BAD_REQUEST);
         }
-    }
-
-    @RequestMapping(value = "api/users/{id}", method = RequestMethod.DELETE)
-    public ResponseEntity deleteUser(@PathVariable Long id, @RequestHeader(value = "Authorization") String token){
-        if(validarToken(token) == false){ return null;}
-        Map<String, String> response = new HashMap<>();
-        try {
-            User user = userRepository.findById(id).get();
-            userRepository.delete(user);
-            return message.viewMessage(HttpStatus.OK,"success","user delete success!!");
-        }catch (Exception e){
-            return message.viewMessage(HttpStatus.NOT_FOUND,"error","User not found!");
-        }
-
-
     }
 }
-
-
-
-
-
-
-
-
-
-
-

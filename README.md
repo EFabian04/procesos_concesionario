@@ -1,2 +1,2 @@
-# procesosDelNegocio
-proyecto de clase para la asignatura de procesos de negocio
+# procesos_concesionario_1_23
+api rest para un concesionario de automóviles.
